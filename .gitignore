@@ -1,0 +1,20 @@
+*~
+*#
+.DS_STORE
+.netbeans
+nbproject
+.idea
+.node_history
+.env
+
+node_modules
+
+*.seed
+*.log
+*.out
+*.pid
+npm-debug.log
+
+
+# project specific
+test.js
