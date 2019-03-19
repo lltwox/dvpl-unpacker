@@ -7,11 +7,11 @@ if (args.length != 3) {
 }
 
 var input = args[2];
-var dvplUnpacker = require('../index.js');
+var DvplUnpacker = require('../index.js');
 
 (async function() {
   try {
-    let output = await dvplUnpacker.unpack(input);
+    let output = await DvplUnpacker.unpackFile(input);
     process.stdout.write(output);
   } catch (err) {
     console.log(err);

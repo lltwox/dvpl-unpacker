@@ -14,12 +14,23 @@ const COMPRESSOR_TYPE = {
 };
 
 /**
+ * Unpack given dvpl buffer
+ *
+ * @param {Buffer} buffer
+ * @return {Buffer}
+ */
+module.exports.unpack = async function(buffer) {
+  let footer = parseFooter(buffer.slice(-20, buffer.length));
+  return decode(buffer.slice(0, -20), footer);
+};
+
+/**
  * Read given .dvpl file into a stream
  *
  * @param {String} filePath
  * @return {Object}
  */
-module.exports.unpack = async function(filePath) {
+module.exports.unpackFile = async function(filePath) {
   let absFilePath = path.join(__dirname, filePath);
 
   let stats = await fs.stat(absFilePath);
@@ -29,16 +40,31 @@ module.exports.unpack = async function(filePath) {
   await fs.read(
     file, footerBuf, 0, footerBuf.length, stats.size - footerBuf.length
   );
+  let footer = parseFooter(footerBuf);
+
+  let input = Buffer.alloc(footer.sizeCompressed);
+  await fs.read(file, input, 0, footer.sizeCompressed, 0);
+
+  return decode(input, footer);
+};
+
+/**
+ * Read and parse footer data
+ *
+ * @param {Buffer} buffer
+ * @return {Object}
+ */
+function parseFooter(buffer) {
   let footer = {
-    sizeUncompressed: footerBuf.readUInt32LE(0),
-    sizeCompressed: footerBuf.readUInt32LE(4),
-    crcCompressed: footerBuf.readUInt32LE(8),
-    type: footerBuf.readUInt32LE(12),
+    sizeUncompressed: buffer.readUInt32LE(0),
+    sizeCompressed: buffer.readUInt32LE(4),
+    crcCompressed: buffer.readUInt32LE(8),
+    type: buffer.readUInt32LE(12),
     marker: [
-      String.fromCharCode(footerBuf.readInt8(16)),
-      String.fromCharCode(footerBuf.readInt8(17)),
-      String.fromCharCode(footerBuf.readInt8(18)),
-      String.fromCharCode(footerBuf.readInt8(19))
+      String.fromCharCode(buffer.readInt8(16)),
+      String.fromCharCode(buffer.readInt8(17)),
+      String.fromCharCode(buffer.readInt8(18)),
+      String.fromCharCode(buffer.readInt8(19))
     ].join('')
   };
 
@@ -49,11 +75,19 @@ module.exports.unpack = async function(filePath) {
     `Unsupported compressor type: ${footer.type}`
   );
 
-  let input = Buffer.alloc(footer.sizeCompressed);
-  await fs.read(file, input, 0, footer.sizeCompressed, 0);
+  return footer;
+}
 
+/**
+ * Decode buffer using footer information
+ *
+ * @param {Buffer} input
+ * @param {Object} footer
+ * @return {Buffer}
+ */
+function decode(input, footer) {
   let output = Buffer.alloc(footer.sizeUncompressed);
   lz4.decodeBlock(input, output);
 
   return output;
-};
+}
