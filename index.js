@@ -19,7 +19,7 @@ const COMPRESSOR_TYPE = {
  * @param {Buffer} buffer
  * @return {Buffer}
  */
-module.exports.unpack = async function(buffer) {
+module.exports.unpack = function(buffer) {
   let footer = parseFooter(buffer.slice(-20, buffer.length));
   return decode(buffer.slice(0, -20), footer);
 };
