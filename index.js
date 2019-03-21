@@ -1,6 +1,13 @@
-var fs = require('fs-extra'),
+var util = require('util'),
+    fs = require('fs'),
     path = require('path'),
-    lz4 = require('lz4');
+    lz4 = require('lz4'),
+
+    fsAsync = {
+      stat: util.promisify(fs.stat),
+      open: util.promisify(fs.open),
+      read: util.promisify(fs.read),
+    };
 
 /**
  * Compressor types defined in DAVA
@@ -33,17 +40,17 @@ module.exports.unpack = function(buffer) {
 module.exports.unpackFile = async function(filePath) {
   let absFilePath = path.join(__dirname, filePath);
 
-  let stats = await fs.stat(absFilePath);
-  let file = await fs.open(absFilePath, 'r');
+  let stats = await fsAsync.stat(absFilePath);
+  let file = await fsAsync.open(absFilePath, 'r');
 
   let footerBuf = Buffer.alloc(20);
-  await fs.read(
+  await fsAsync.read(
     file, footerBuf, 0, footerBuf.length, stats.size - footerBuf.length
   );
   let footer = parseFooter(footerBuf);
 
   let input = Buffer.alloc(footer.sizeCompressed);
-  await fs.read(file, input, 0, footer.sizeCompressed, 0);
+  await fsAsync.read(file, input, 0, footer.sizeCompressed, 0);
 
   return decode(input, footer);
 };
@@ -71,9 +78,6 @@ function parseFooter(buffer) {
   if (footer.marker != 'DVPL') throw new Error(
     `Unknown marker: ${footer.marker}`
   );
-  if (footer.type != COMPRESSOR_TYPE.LZ4HC) throw new Error(
-    `Unsupported compressor type: ${footer.type}`
-  );
 
   return footer;
 }
@@ -86,8 +90,15 @@ function parseFooter(buffer) {
  * @return {Buffer}
  */
 function decode(input, footer) {
-  let output = Buffer.alloc(footer.sizeUncompressed);
-  lz4.decodeBlock(input, output);
+  if (footer.type == COMPRESSOR_TYPE.NONE) {
+    return input;
+  } else if (footer.type == COMPRESSOR_TYPE.LZ4HC) {
+    let output = Buffer.alloc(footer.sizeUncompressed);
+    lz4.decodeBlock(input, output);
+    return output;
+  }
 
-  return output;
+  throw new Error(
+    `Unsupported compressor type: ${Object.keys(COMPRESSOR_TYPE)[footer.type]}`
+  );
 }
