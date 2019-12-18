@@ -8,11 +8,14 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "bin": {
-    "dvpl-unpacker": "./bin/unpack"
+    "dvpl-unpack": "./bin/unpack",
+    "dvpl-unpack-dir": "./bin/unpack-dir"
   },
   "author": "Alexander Golubev",
   "license": "UNLICENSED",
   "dependencies": {
+    "fs-extra": "^8.1.0",
+    "klaw": "^3.0.0",
     "lz4": "^0.6.3"
   }
 }

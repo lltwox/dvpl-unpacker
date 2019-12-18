@@ -1,0 +1,73 @@
+#!/usr/bin/env node
+
+let fs = require('fs-extra'),
+    path = require('path'),
+    klaw = require('klaw'),
+    DvplUnpacker = require('../index.js');
+
+let args = process.argv;
+if (args.length != 4) {
+  console.log('Usage: dvpl-unpack-dir <input dir> <output dir>');
+  process.exit(1);
+}
+
+let inputDir = args[2],
+    outputDir = args[3];
+
+if (!inputDir) throw new Error('Missing <input dir> arg');
+if (!outputDir) throw new Error('Missing <output dir> arg');
+
+(async function() {
+  let intputStat = await fs.stat(inputDir);
+  if (!intputStat.isDirectory()) throw new Error('Input is not a directory');
+  let input = path.resolve(inputDir);
+
+  try {
+    let outputStat = await fs.stat(outputDir);
+    if (!outputStat.isDirectory()) throw new Error('Output is not a directory');
+  } catch (err) {
+    if (err.code == 'ENOENT') {
+      await fs.ensureDir(outputDir);
+    } else {
+      throw err;
+    }
+  }
+  let output = path.resolve(outputDir);
+
+  let files = [];
+  await new Promise((resolve, reject) => {
+    klaw(input)
+      .on('data', file => {
+        if (file.stats.isFile()) files.push(file.path);
+      })
+      .on('error', reject)
+      .on('end', resolve);
+  });
+
+  let dirs = [];
+  let unpacked = 0, copied = 0;
+  for (const file of files) {
+    let target = file.replace(input, output);
+    if (path.extname(file) == '.dvpl') {
+      target = target.replace(/\.dvpl$/, '');
+      console.log('Unpacking', file, '=>', target);
+
+      let dir = path.dirname(target);
+      if (!dirs.includes(dir)) {
+        await fs.ensureDir(dir);
+        dirs.push(dir);
+      }
+      await fs.writeFile(
+        target, await DvplUnpacker.unpack(await fs.readFile(file))
+      );
+      unpacked++;
+    } else {
+      console.log('Copied', file);
+      await fs.copy(file, target);
+      copied++;
+    }
+  }
+
+  console.log('Unpacked', unpacked, 'files');
+  console.log('Copied  ', copied, 'files');
+}());

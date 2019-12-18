@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
-var args = process.argv;
+let args = process.argv;
 if (args.length != 3) {
-  console.log('Usage: dvpl-unpacker <input file>');
+  console.log('Usage: dvpl-unpack <input file>');
   process.exit(1);
 }
 
-var input = args[2];
-var DvplUnpacker = require('../index.js');
+let input = args[2];
+let DvplUnpacker = require('../index.js');
 
 (async function() {
   try {
