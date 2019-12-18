@@ -8,7 +8,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "bin": {
-    "dvplUnpacker": "./bin/dvpl-unpacker"
+    "dvpl-unpacker": "./bin/unpack"
   },
   "author": "Alexander Golubev",
   "license": "UNLICENSED",
